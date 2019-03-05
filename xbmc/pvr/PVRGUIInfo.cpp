@@ -1080,6 +1080,20 @@ bool CPVRGUIInfo::GetListItemAndPlayerBool(const CFileItem *item, const CGUIInfo
 {
   switch (info.m_info)
   {
+    case LISTITEM_HASARCHIVE:
+      if (item->IsPVRChannel())
+      {
+        bValue = item->GetPVRChannelInfoTag()->HasArchive();
+        return true;
+      }
+      break;
+    case LISTITEM_ISPLAYABLE:
+      if (item->IsEPG())
+      {
+        bValue = item->GetEPGInfoTag()->IsPlayable();
+        return true;
+      }
+      break;
     case LISTITEM_ISRECORDING:
       if (item->IsPVRChannel())
       {

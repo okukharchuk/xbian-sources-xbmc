@@ -47,6 +47,7 @@ CPVRChannel::CPVRChannel(bool bRadio /* = false */)
   m_bIsLocked               = false;
   m_iLastWatched            = 0;
   m_bChanged                = false;
+  m_bHasArchive             = false;
 
   m_iEpgId                  = -1;
   m_bEPGCreated             = false;
@@ -72,7 +73,17 @@ CPVRChannel::CPVRChannel(const PVR_CHANNEL &channel, unsigned int iClientId)
   m_strChannelName          = channel.strChannelName;
   m_iUniqueId               = channel.iUniqueId;
   m_strClientChannelName    = channel.strChannelName;
-  m_strInputFormat          = channel.strInputFormat;
+  // CoreELEC specific: use strInputFormat to indicate the presence of archive support.
+  if (strcmp(channel.strInputFormat, "iptv/hasarchive") == 0)
+  {
+    m_strInputFormat        = "";
+    m_bHasArchive           = true;
+  }
+  else
+  {
+    m_strInputFormat        = channel.strInputFormat;
+    m_bHasArchive           = false;
+  }  
   m_iClientEncryptionSystem = channel.iEncryptionSystem;
   m_iClientId               = iClientId;
   m_iLastWatched            = 0;
@@ -116,6 +127,7 @@ void CPVRChannel::Serialize(CVariant& value) const
     epg->Serialize(value["broadcastnext"]);
 
   value["isrecording"] = IsRecording();
+  value["hasarchive"] = m_bHasArchive;
 }
 
 /********** XBMC related channel methods **********/
@@ -182,12 +194,14 @@ bool CPVRChannel::UpdateFromClient(const CPVRChannelPtr &channel)
   if (m_clientChannelNumber     != channel->m_clientChannelNumber ||
       m_strInputFormat          != channel->InputFormat() ||
       m_iClientEncryptionSystem != channel->EncryptionSystem() ||
-      m_strClientChannelName    != channel->ClientChannelName())
+      m_strClientChannelName    != channel->ClientChannelName() ||
+      m_bHasArchive             != channel->HasArchive())
   {
     m_clientChannelNumber     = channel->m_clientChannelNumber;
     m_strInputFormat          = channel->InputFormat();
     m_iClientEncryptionSystem = channel->EncryptionSystem();
     m_strClientChannelName    = channel->ClientChannelName();
+    m_bHasArchive             = channel->HasArchive();
 
     UpdateEncryptionName();
     SetChanged();
@@ -302,6 +316,12 @@ bool CPVRChannel::HasRecording(void) const
 {
   const CPVREpgInfoTagPtr epgTag = GetEPGNow();
   return epgTag && epgTag->HasRecording();
+}
+
+bool CPVRChannel::HasArchive(void) const
+{
+  CSingleLock lock(m_critSection);
+  return m_bHasArchive;
 }
 
 bool CPVRChannel::SetIconPath(const std::string &strIconPath, bool bIsUserSetIcon /* = false */)
